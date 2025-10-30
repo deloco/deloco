@@ -1,0 +1,70 @@
+blueprint:
+  name: Kalender-Erinnerung per Sprachausgabe (Sonos)
+  description: >
+    Spielt eine Sprachnachricht auf einem oder mehreren Sonos-Lautsprechern ab,
+    wenn ein Kalender-Ereignis bevorsteht (z. B. 15 Minuten vorher).
+  domain: automation
+  input:
+    calendar_entity:
+      name: Kalender
+      description: Wähle den Kalender aus, der überwacht werden soll.
+      selector:
+        entity:
+          domain: calendar
+
+    sonos_speaker:
+      name: Sonos Lautsprecher
+      description: Wähle einen oder mehrere Lautsprecher für die Sprachausgabe.
+      selector:
+        target:
+          entity:
+            domain: media_player
+
+    tts_service:
+      name: TTS-Service
+      description: >
+        Wähle den TTS-Dienst, z. B. tts.google_translate_say oder tts.piper_say.
+      default: tts.google_translate_say
+      selector:
+        text:
+
+    offset_time:
+      name: Vorlaufzeit
+      description: >
+        Wie viele Minuten vor dem Termin soll die Ansage erfolgen?
+      default: "00:15:00"
+      selector:
+        time:
+
+    volume:
+      name: Lautstärke
+      description: >
+        Lautstärke des Lautsprechers (0.0–1.0).
+      default: 0.4
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.05
+          mode: slider
+
+alias: Kalender-Erinnerung per Sonos (Blueprint)
+mode: single
+
+trigger:
+  - platform: calendar
+    event: start
+    entity_id: !input calendar_entity
+    offset: !input offset_time
+
+action:
+  - service: media_player.volume_set
+    target: !input sonos_speaker
+    data:
+      volume_level: !input volume
+  - service: !input tts_service
+    data:
+      entity_id: !input sonos_speaker
+      message: >
+        Erinnerung: Der Termin {{ trigger.calendar_event.summary }}
+        beginnt in {{ (as_timestamp(trigger.calendar_event.start_time) - now().timestamp()) | int(0) // 60 }} Minuten.
