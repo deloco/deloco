@@ -1,8 +1,8 @@
 blueprint:
-  name: Kalender-Erinnerung per Sprachausgabe (Sonos)
+  name: Kalender-Erinnerung per Sprachausgabe (Sonos, gefiltert)
   description: >
-    Spielt eine Sprachnachricht auf einem oder mehreren Sonos-Lautsprechern ab,
-    wenn ein Kalender-Ereignis bevorsteht (z. B. 15 Minuten vorher).
+    Spricht eine Erinnerung über Sonos, wenn ein Kalendertermin bevorsteht,
+    der bestimmte Stichwörter enthält (z. B. "Arzt" oder "Meeting").
   domain: automation
   input:
     calendar_entity:
@@ -48,7 +48,16 @@ blueprint:
           step: 0.05
           mode: slider
 
-alias: Kalender-Erinnerung per Sonos (Blueprint)
+    keywords:
+      name: Stichwörter
+      description: >
+        Liste von Wörtern (durch Komma getrennt). Nur Termine, die eines dieser
+        Wörter im Titel enthalten, werden angesagt.
+      default: "Arzt, Meeting, Geburtstag"
+      selector:
+        text:
+
+alias: Kalender-Erinnerung per Sonos (gefiltert)
 mode: single
 
 trigger:
@@ -56,6 +65,13 @@ trigger:
     event: start
     entity_id: !input calendar_entity
     offset: !input offset_time
+
+condition:
+  - condition: template
+    value_template: >
+      {% set words = (i('keywords').split(',')) | map('trim') | list %}
+      {% set title = trigger.calendar_event.summary | lower %}
+      {{ words | select('in', title) | list | length > 0 }}
 
 action:
   - service: media_player.volume_set
